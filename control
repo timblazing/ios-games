@@ -1,0 +1,9 @@
+Package: com.local.solitaire
+Name: Solitaire
+Version: 1.0.0
+Architecture: iphoneos-arm
+Description: Minimal offline Draw-1 Klondike for iPad
+Maintainer: Solitaire
+Author: Solitaire
+Section: Games
+Depends: firmware (>= 10.0)
