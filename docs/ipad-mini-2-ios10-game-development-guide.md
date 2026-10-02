@@ -1,5 +1,7 @@
 # iPad mini 2 (iOS 10.3.3) Game Development Guide
 
+> Original research notes, kept for reference. Where this disagrees with [AGENTS.md](../AGENTS.md), AGENTS.md wins. In particular, games now build against the iPhoneOS 16.5 SDK with an iOS 10.0 deployment target, because current Xcode can't link against the 10.3 SDK. Solitaire also ships one card design rather than themes.
+
 ## Recommended default stack
 
 For a **jailbroken iPad mini 2 on iOS 10.3.3**, the best general-purpose stack is:
