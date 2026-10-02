@@ -7,7 +7,8 @@ stage=$(mktemp -d)
 trap 'rm -rf "$stage"' EXIT
 mkdir -p "$stage/Payload" dist
 cp -R "$app" "$stage/Payload/"
-output="$PWD/dist/Solitaire-1.0.0.ipa"
+version=$(awk '/^Version:/ {print $2}' control)
+output="$PWD/dist/Solitaire-$version.ipa"
 rm -f "$output"
 (cd "$stage" && zip -qr "$output" Payload)
 echo "$output"

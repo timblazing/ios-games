@@ -24,8 +24,20 @@
     }
     return self;
 }
++ (CGFloat)marginForWidth:(CGFloat)width {
+    return MAX(14, width * 0.025);
+}
+// Card size depends on scene width only, so it is known for both orientations up front.
++ (CGSize)cardSizeForWidth:(CGFloat)width {
+    CGFloat w = MIN(112, (width - 2 * [self marginForWidth:width] - 6 * 12) / 7);
+    return CGSizeMake(w, w * 1.4);
+}
 - (CGFloat)margin {
-    return MAX(14, self.size.width * 0.025);
+    return [GameScene marginForWidth:self.size.width];
+}
+// Portrait has far more vertical room, so face-up cards in a column are spread further apart.
+- (CGFloat)faceUpStep {
+    return self.size.height > self.size.width ? 0.32 : 0.24;
 }
 - (CGFloat)gap {
     return (self.size.width - 2 * self.margin - 7 * self.cardSize.width) / 6;
@@ -46,14 +58,21 @@
         NSArray *pile = self.game.piles[p];
         CGFloat desired = 0;
         for (NSInteger j = 0; j < (NSInteger)pile.count - 1; j++)
-            desired += ((Card *)pile[j]).faceUp ? self.cardSize.height * 0.24 : self.cardSize.height * 0.105;
+            desired += self.cardSize.height * (((Card *)pile[j]).faceUp ? self.faceUpStep : 0.105);
         CGFloat room = MAX(0, pos.y - self.cardSize.height / 2 - 12),
                 factor = desired > 0 ? MIN(1, room / desired) : 1;
         for (NSInteger j = 0; j < i; j++)
-            pos.y -= (((Card *)pile[j]).faceUp ? self.cardSize.height * 0.24 : self.cardSize.height * 0.105) *
-                     factor;
+            pos.y -= self.cardSize.height * (((Card *)pile[j]).faceUp ? self.faceUpStep : 0.105) * factor;
     }
     return pos;
+}
+- (void)preloadTextures {
+    CGSize screen = [UIScreen mainScreen].bounds.size;
+    CGFloat longSide = MAX(screen.width, screen.height), shortSide = MIN(screen.width, screen.height);
+    [CardNode preloadForSizes:@[
+        [NSValue valueWithCGSize:[GameScene cardSizeForWidth:longSide]],
+        [NSValue valueWithCGSize:[GameScene cardSizeForWidth:shortSide]]
+    ]];
 }
 - (void)didChangeSize:(CGSize)oldSize {
     if (self.game) {
@@ -64,8 +83,7 @@
 - (void)refreshAnimated:(BOOL)animated {
     if (!self.game)
         return;
-    self.cardSize = CGSizeMake(MIN(112, (self.size.width - 2 * self.margin - 6 * 12) / 7), 0);
-    self.cardSize = CGSizeMake(self.cardSize.width, self.cardSize.width * 1.4);
+    self.cardSize = [GameScene cardSizeForWidth:self.size.width];
     for (SKNode *s in self.slots)
         [s removeFromParent];
     [self.slots removeAllObjects];
@@ -76,7 +94,6 @@
         [self.slots addObject:slot];
         [self addChild:slot];
     }
-    NSString *back = [[NSUserDefaults standardUserDefaults] stringForKey:@"cardBack"] ?: @"default.png";
     BOOL motion = animated && !UIAccessibilityIsReduceMotionEnabled();
     for (NSInteger p = 0; p < 13; p++)
         for (NSInteger i = 0; i < (NSInteger)self.game.piles[p].count; i++) {
@@ -95,7 +112,7 @@
             node.colorBlendFactor = 0;
             node.alpha = 1;
             node.hidden = p < 6 && i < (NSInteger)self.game.piles[p].count - 1;
-            [node refreshWithSize:self.cardSize back:back animated:motion];
+            [node refreshWithSize:self.cardSize animated:motion];
             [node removeActionForKey:@"move"];
             [node removeActionForKey:@"victory"];
             node.yScale = 1;

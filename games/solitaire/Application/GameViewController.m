@@ -15,8 +15,11 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
     self.view.backgroundColor = [UIColor blackColor];
-    [[NSUserDefaults standardUserDefaults]
-        registerDefaults:@{@"cardBack" : @"default.png", @"drawMode" : @1, @"soundEnabled" : @NO}];
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    [defaults registerDefaults:@{@"soundEnabled" : @NO}];
+    // v1 settings that no longer exist.
+    [defaults removeObjectForKey:@"cardBack"];
+    [defaults removeObjectForKey:@"drawMode"];
     self.board = [[SKView alloc] initWithFrame:self.view.bounds];
     self.board.backgroundColor = [UIColor blackColor];
     self.board.ignoresSiblingOrder = YES;
@@ -30,6 +33,7 @@
         [weakSelf updateStatus];
     };
     [self.board presentScene:self.scene];
+    [self.scene preloadTextures];
     self.controls = [[GameControls alloc] initWithFrame:CGRectZero];
     [self.view addSubview:self.controls];
     [self.controls.undoButton addTarget:self
@@ -63,16 +67,17 @@
 - (void)viewDidLayoutSubviews {
     [super viewDidLayoutSubviews];
     CGSize size = self.view.bounds.size;
-    self.controls.frame = CGRectMake(0, 0, size.width, 52);
-    self.board.frame = CGRectMake(0, 52, size.width, size.height - 52);
+    CGFloat bar = 52, boardHeight = size.height - bar;
+    self.board.frame = CGRectMake(0, 0, size.width, boardHeight);
+    self.controls.frame = CGRectMake(0, boardHeight, size.width, bar);
     self.scene.size = self.board.bounds.size;
-    self.victory.frame = CGRectMake(24, size.height * 0.48, size.width - 48, 150);
+    self.victory.frame = CGRectMake(24, boardHeight * 0.48, size.width - 48, 150);
 }
 - (BOOL)prefersStatusBarHidden {
     return YES;
 }
 - (UIInterfaceOrientationMask)supportedInterfaceOrientations {
-    return UIInterfaceOrientationMaskLandscape;
+    return UIInterfaceOrientationMaskAll;
 }
 - (void)startTimer {
     [self.timer invalidate];
@@ -105,7 +110,7 @@
     if (self.scene.game.won) {
         self.victory.hidden = NO;
         self.victory.text =
-            [NSString stringWithFormat:@"Nicely played.\n%@   ·   %ld moves\nTap New game to play again",
+            [NSString stringWithFormat:@"Nicely played.\n%@   ·   %ld moves\nTap the new game button to play again",
                                        time, (long)self.scene.game.moves];
         if (!self.showingVictory)
             [self.scene celebrate];

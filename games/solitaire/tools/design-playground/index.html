@@ -1,0 +1,590 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Solitaire design playground</title>
+<style>
+  :root { color-scheme: dark; --bg: #111; --panel: #1b1b1d; --line: #2c2c30; --text: #e8e8ea; --dim: #9a9aa0; --ok: #6fcf8a; --warn: #f0b45a; --bad: #ef6b6b; --accent: #7fb3e6; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif; }
+  header { display: flex; align-items: center; gap: 24px; padding: 14px 24px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--bg); z-index: 5; }
+  header h1 { font-size: 15px; font-weight: 600; margin: 0; }
+  nav button { background: none; border: 0; color: var(--dim); font: inherit; padding: 6px 12px; border-radius: 6px; cursor: pointer; }
+  nav button[aria-selected="true"] { background: var(--panel); color: var(--text); }
+  main { padding: 20px 24px 60px; }
+  section.tab { display: none; }
+  section.tab.active { display: block; }
+  h2 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--dim); margin: 32px 0 12px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+  .row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+  .drop { border: 1.5px dashed #444; border-radius: 10px; padding: 22px; text-align: center; color: var(--dim); }
+  .drop.over { border-color: var(--accent); color: var(--text); background: #16202b; }
+  label.btn, button.btn { display: inline-block; background: #2a2a2e; color: var(--text); border: 1px solid #3a3a3f; border-radius: 7px; padding: 6px 12px; font: inherit; cursor: pointer; }
+  label.btn:hover, button.btn:hover { background: #333338; }
+  input[type=file] { display: none; }
+  .seg { display: inline-flex; border: 1px solid #3a3a3f; border-radius: 7px; overflow: hidden; }
+  .seg button { background: #222; color: var(--dim); border: 0; padding: 6px 12px; font: inherit; cursor: pointer; }
+  .seg button + button { border-left: 1px solid #3a3a3f; }
+  .seg button.on { background: #3a3a40; color: var(--text); }
+  .hint { color: var(--dim); font-size: 12px; }
+  ul.issues { margin: 6px 0 0; padding-left: 18px; }
+  ul.issues li { margin: 2px 0; }
+  .ok { color: var(--ok); } .warn { color: var(--warn); } .bad { color: var(--bad); }
+  .suitrow { display: flex; gap: 6px; margin-bottom: 10px; width: max-content; }
+  #deck { overflow-x: auto; }
+  .inline { margin: 4px 0 0; color: var(--dim); }
+  .scroll { overflow: auto; }
+  canvas { display: block; }
+  .stress { display: flex; gap: 32px; flex-wrap: wrap; align-items: flex-start; }
+  .stress figure { margin: 0; }
+  figcaption { color: var(--dim); font-size: 12px; margin-top: 6px; }
+  .sizes { display: flex; gap: 40px; flex-wrap: wrap; align-items: flex-end; }
+  .sizes figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .sizes .pair { display: flex; gap: 18px; align-items: flex-end; }
+  .masked { border-radius: 22.37%; overflow: hidden; display: block; }
+  .home { position: relative; overflow: hidden; background-size: cover; background-position: center; }
+  .home .grid { position: absolute; display: grid; }
+  .home .app { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .home .app .ic { width: 76px; height: 76px; border-radius: 22.37%; overflow: hidden; }
+  .home .app .ic img, .home .app .ic canvas { width: 100%; height: 100%; display: block; }
+  .home .app span { color: #fff; font-size: 12px; text-shadow: 0 1px 2px rgba(0,0,0,.6); white-space: nowrap; }
+  .home .dock { position: absolute; left: 0; right: 0; bottom: 0; height: 112px; background: rgba(255,255,255,.22); backdrop-filter: blur(12px); display: flex; justify-content: center; align-items: center; gap: 48px; }
+  .home .dots { position: absolute; left: 0; right: 0; bottom: 122px; display: flex; justify-content: center; gap: 8px; }
+  .home .dots i { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,.45); }
+  .home .dots i:first-child { background: #fff; }
+  .homewrap { transform-origin: top left; }
+  .compare { display: flex; gap: 40px; align-items: flex-end; }
+  .compare figure { margin: 0; text-align: center; }
+  .compare .ic { width: 152px; height: 152px; border-radius: 22.37%; overflow: hidden; background: #222; }
+  .compare .ic img, .compare .ic canvas { width: 100%; height: 100%; display: block; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Solitaire design playground</h1>
+  <nav role="tablist">
+    <button role="tab" aria-selected="true" data-tab="cards">Cards</button>
+    <button role="tab" aria-selected="false" data-tab="icon">App icon</button>
+  </nav>
+  <span class="hint">Everything stays in this browser. Nothing is uploaded.</span>
+</header>
+<main>
+
+<section class="tab active" id="tab-cards">
+  <div class="drop" id="cardDrop">
+    Drop the card art folder here (e.g. <code>Resources/Cards/</code>), or
+    <label class="btn">Choose folder…<input type="file" id="cardFolder" webkitdirectory multiple></label>
+    <label class="btn">Choose files…<input type="file" id="cardFiles" accept="image/png" multiple></label>
+    <div class="hint" style="margin-top:8px">Expects 53 PNGs: <code>back.png</code> and <code>&lt;rank&gt;&lt;suit&gt;.png</code> (A 2–10 J Q K × S H D C), 250×350 px, 5:7.</div>
+  </div>
+
+  <h2>Validation</h2>
+  <div class="panel" id="validation"><span class="hint">No art loaded. Every card previews with the app's drawn fallback.</span></div>
+
+  <h2>Simulated board</h2>
+  <div class="row" style="margin-bottom:12px">
+    <div class="seg" id="orientSeg"><button data-v="landscape" class="on">Landscape 1024×768</button><button data-v="portrait">Portrait 768×1024</button></div>
+    <div class="seg" id="zoomSeg"><button data-v="1" class="on">1× points</button><button data-v="2">2× device pixels</button><button data-v="phys">Physical size</button></div>
+    <button class="btn" id="redeal">Re-deal</button>
+    <span class="hint" id="physHint" hidden>Approximates the iPad mini 2 (326 ppi) assuming the browser's 96 CSS px per inch. Hold a ruler up: the board should be 15.7 cm wide in landscape.</span>
+  </div>
+  <div class="scroll"><canvas id="board"></canvas></div>
+
+  <h2>Stress views</h2>
+  <p class="hint">Worst-case overlap in the current orientation. Left: a 13-card face-up run in an empty column. Right: the same run under six face-down cards. Both use the app's compression, which kicks in when a column would run off the bottom of the board (landscape only, at these lengths).</p>
+  <div class="stress scroll">
+    <figure><canvas id="stressRun"></canvas><figcaption>13-card run</figcaption></figure>
+    <figure><canvas id="stressCompressed"></canvas><figcaption>6 face-down + 13-card run</figcaption></figure>
+  </div>
+
+  <h2>Full deck</h2>
+  <div id="deck"></div>
+</section>
+
+<section class="tab" id="tab-icon">
+  <div class="drop" id="iconDrop">
+    Drop <code>icon-1024.png</code> here, or
+    <label class="btn">Choose file…<input type="file" id="iconFile" accept="image/png"></label>
+  </div>
+
+  <h2>Validation</h2>
+  <div class="panel" id="iconValidation"><span class="hint">No icon loaded.</span></div>
+
+  <h2>Sizes</h2>
+  <p class="hint">Each bundle size at 1× (one image pixel per screen pixel) and at its physical on-device size.</p>
+  <div class="sizes" id="sizes"></div>
+
+  <h2>Home screen</h2>
+  <div class="row" style="margin-bottom:12px">
+    <div class="seg" id="homeOrientSeg"><button data-v="portrait" class="on">Portrait</button><button data-v="landscape">Landscape</button></div>
+    <div class="seg" id="wallSeg"><button data-v="dark" class="on">Dark</button><button data-v="light">Light</button><button data-v="custom">Custom…</button></div>
+    <input type="file" id="wallFile" accept="image/*">
+  </div>
+  <div id="homeOuter"><div class="homewrap" id="homeWrap"><div class="home" id="home"></div></div></div>
+
+  <h2>v1 vs new</h2>
+  <div class="compare">
+    <figure><div class="ic"><img src="v1-icon-152.png" alt="v1 icon"></div><figcaption>v1</figcaption></figure>
+    <figure><div class="ic" id="compareNew"></div><figcaption>New</figcaption></figure>
+  </div>
+</section>
+
+</main>
+<script>
+"use strict";
+
+// ---------- Cards ----------
+
+const RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
+// Suit order matches Card.m: identifier = suit * 13 + rank - 1, with suits ♥ ♦ ♣ ♠.
+const SUITS = [{ letter: "H", glyph: "♥", red: true }, { letter: "D", glyph: "♦", red: true },
+               { letter: "C", glyph: "♣", red: false }, { letter: "S", glyph: "♠", red: false }];
+const nameFor = id => id < 0 ? "back" : RANKS[id % 13] + SUITS[Math.floor(id / 13)].letter;
+const EXPECTED = ["back", ...Array.from({ length: 52 }, (_, i) => nameFor(i))];
+
+const art = new Map();          // name -> HTMLImageElement
+let extras = [];                // unexpected filenames
+let badFiles = [];              // files that failed to decode
+
+async function loadCardFiles(files) {
+  for (const img of art.values()) URL.revokeObjectURL(img.src);
+  art.clear(); extras = []; badFiles = [];
+  const pngs = files.filter(f => !f.name.startsWith("."));
+  await Promise.all(pngs.map(async f => {
+    const base = f.name.replace(/\.[^.]+$/, "");
+    const ext = f.name.slice(base.length).toLowerCase();
+    if (ext !== ".png" || !EXPECTED.includes(base)) { extras.push(f.name); return; }
+    const img = new Image();
+    img.src = URL.createObjectURL(f);
+    try { await img.decode(); art.set(base, img); } catch { badFiles.push(f.name); }
+  }));
+  renderCards();
+}
+
+function validateCards() {
+  const el = document.getElementById("validation");
+  if (!art.size && !extras.length && !badFiles.length) {
+    el.innerHTML = '<span class="hint">No art loaded. Every card previews with the app\'s drawn fallback.</span>';
+    return;
+  }
+  const missing = EXPECTED.filter(n => !art.has(n));
+  const wrongRatio = [], small = [];
+  for (const [name, img] of art) {
+    if (Math.abs(img.naturalWidth / img.naturalHeight - 5 / 7) > 0.005) wrongRatio.push(`${name}.png (${img.naturalWidth}×${img.naturalHeight})`);
+    if (img.naturalWidth < 250 || img.naturalHeight < 350) small.push(`${name}.png (${img.naturalWidth}×${img.naturalHeight})`);
+  }
+  const line = (cls, title, list) => list.length
+    ? `<div class="${cls}"><strong>${title} (${list.length})</strong><ul class="issues"><li>${list.join("</li><li>")}</li></ul></div>` : "";
+  el.innerHTML =
+    `<div class="${missing.length || wrongRatio.length || small.length || badFiles.length ? "warn" : "ok"}">${art.size} of 53 cards loaded.</div>` +
+    (missing.length ? `<div class="warn"><strong>Missing, will use drawn fallback (${missing.length})</strong><p class="inline">${missing.map(n => n + ".png").join(", ")}</p></div>` : "") +
+    line("bad", "Not 5:7, will be cropped", wrongRatio) +
+    line("warn", "Smaller than 250×350, may look soft", small) +
+    line("bad", "Could not be decoded", badFiles) +
+    line("warn", "Unexpected files, ignored by the app", extras);
+}
+
+// Draws one card exactly like CardNode.m: 2pt inset, 7pt rounded clip, drop shadow, art aspect-filled,
+// or the v1 drawn face/back when the art is missing. Coordinates are in points.
+function drawCard(ctx, id, faceUp, x, y, w, h) {
+  const r = { x: x + 2, y: y + 2, w: w - 4, h: h - 4 };
+  const shape = () => { ctx.beginPath(); ctx.roundRect(r.x, r.y, r.w, r.h, 7); };
+  ctx.save();
+  ctx.shadowColor = "rgba(0,0,0,.5)"; ctx.shadowBlur = 2; ctx.shadowOffsetY = 2;
+  ctx.fillStyle = "rgb(237,237,237)"; shape(); ctx.fill();
+  ctx.restore();
+  ctx.save();
+  shape(); ctx.clip();
+  const img = art.get(nameFor(faceUp ? id : -1));
+  if (img) {
+    const s = Math.max(r.w / img.naturalWidth, r.h / img.naturalHeight);
+    const tw = img.naturalWidth * s, th = img.naturalHeight * s;
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(img, r.x + r.w / 2 - tw / 2, r.y + r.h / 2 - th / 2, tw, th);
+  } else if (faceUp) {
+    drawFallbackFace(ctx, id, x, y, w, h);
+  } else {
+    drawFallbackBack(ctx, r);
+  }
+  ctx.restore();
+}
+
+function drawFallbackFace(ctx, id, x, y, w, h) {
+  const suit = SUITS[Math.floor(id / 13)];
+  const ink = suit.red ? "rgb(176,48,64)" : "rgb(31,31,31)";
+  const label = RANKS[id % 13] + suit.glyph;
+  ctx.fillStyle = ink;
+  ctx.textBaseline = "top";
+  ctx.font = `600 ${w * 0.19}px -apple-system, "Helvetica Neue", sans-serif`;
+  ctx.fillText(label, x + 8, y + 6);
+  ctx.save();
+  ctx.translate(x + w, y + h); ctx.rotate(Math.PI);
+  ctx.fillText(label, 8, 6);
+  ctx.restore();
+  ctx.font = `${w * 0.45}px -apple-system, "Helvetica Neue", sans-serif`;
+  ctx.textBaseline = "middle"; ctx.textAlign = "center";
+  ctx.fillText(suit.glyph, x + w / 2, y + h / 2);
+  ctx.textAlign = "start";
+}
+
+function drawFallbackBack(ctx, r) {
+  ctx.fillStyle = "rgb(28,41,59)";
+  ctx.fillRect(r.x, r.y, r.w, r.h);
+  const spacing = r.w * 32 / 240;
+  ctx.beginPath();
+  for (let d = -r.h; d < r.w + r.h; d += spacing) {
+    ctx.moveTo(r.x + d, r.y); ctx.lineTo(r.x + d + r.h, r.y + r.h);
+    ctx.moveTo(r.x + d + r.h, r.y); ctx.lineTo(r.x + d, r.y + r.h);
+  }
+  ctx.lineWidth = 1; ctx.strokeStyle = "rgb(66,87,110)"; ctx.stroke();
+  ctx.beginPath(); ctx.roundRect(r.x + 5, r.y + 5, r.w - 10, r.h - 10, 4);
+  ctx.strokeStyle = "rgba(255,255,255,.18)"; ctx.stroke();
+}
+
+// Layout math mirrors Application/Scenes/GameScene.m. Keep the two in sync.
+const BAR = 52;  // GameViewController: controls bar height at the bottom of the screen
+const marginFor = w => Math.max(14, w * 0.025);
+function cardSizeFor(w) { const cw = Math.min(112, (w - 2 * marginFor(w) - 6 * 12) / 7); return { w: cw, h: cw * 1.4 }; }
+
+// Returns a function mapping (pile, index) to a card center in SpriteKit coordinates (y up).
+function layout(sceneW, sceneH, piles) {
+  const card = cardSizeFor(sceneW), margin = marginFor(sceneW);
+  const gap = (sceneW - 2 * margin - 7 * card.w) / 6;
+  const faceUpStep = sceneH > sceneW ? 0.32 : 0.24;
+  const origin = p => {
+    const step = card.w + gap, x = margin + card.w / 2, top = sceneH - card.h / 2 - 8;
+    if (p === 0) return { x, y: top };
+    if (p === 1) return { x: x + step, y: top };
+    if (p < 6) return { x: x + (p + 1) * step, y: top };
+    return { x: x + (p - 6) * step, y: sceneH - card.h * 1.5 - 32 };
+  };
+  const position = (p, i) => {
+    const pos = origin(p);
+    if (p >= 6) {
+      const pile = piles[p];
+      let desired = 0;
+      for (let j = 0; j < pile.length - 1; j++) desired += card.h * (pile[j].up ? faceUpStep : 0.105);
+      const room = Math.max(0, pos.y - card.h / 2 - 12), factor = desired > 0 ? Math.min(1, room / desired) : 1;
+      for (let j = 0; j < i; j++) pos.y -= card.h * (pile[j].up ? faceUpStep : 0.105) * factor;
+    }
+    return pos;
+  };
+  return { card, origin, position };
+}
+
+function zoomScale() {
+  const z = document.querySelector("#zoomSeg .on").dataset.v;
+  return z === "phys" ? 96 / 163 : Number(z);  // 326 ppi / 2 = 163 points per inch
+}
+
+function prepareCanvas(canvas, w, h) {
+  const scale = zoomScale(), dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.round(w * scale * dpr); canvas.height = Math.round(h * scale * dpr);
+  canvas.style.width = w * scale + "px"; canvas.style.height = h * scale + "px";
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
+  ctx.fillStyle = "#000"; ctx.fillRect(0, 0, w, h);
+  return ctx;
+}
+
+function drawSlot(ctx, cx, cy, card, label) {
+  ctx.beginPath(); ctx.roundRect(cx - card.w / 2 + 2, cy - card.h / 2 + 2, card.w - 4, card.h - 4, 7);
+  ctx.strokeStyle = "rgb(51,51,51)"; ctx.lineWidth = 1; ctx.stroke();
+  if (label) {
+    ctx.fillStyle = "rgb(77,77,77)"; ctx.font = '300 24px "Helvetica Neue", sans-serif';
+    ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(label, cx, cy); ctx.textAlign = "start";
+  }
+}
+
+// Draws a scene (piles 0 stock, 1 waste, 2–5 foundations, 6–12 tableau) into a canvas of sceneW×sceneH points.
+function drawScene(ctx, sceneW, sceneH, piles, offsetY = 0, slots = true) {
+  const L = layout(sceneW, sceneH, piles);
+  const toY = y => offsetY + sceneH - y;  // SpriteKit y-up to canvas y-down
+  if (slots) for (let p = 0; p < 13; p++) {
+    const o = L.origin(p);
+    drawSlot(ctx, o.x, toY(o.y), L.card, p === 0 ? "↻" : (p >= 2 && p < 6 ? ["♥", "♦", "♣", "♠"][p - 2] : ""));
+  }
+  for (let p = 0; p < 13; p++) piles[p].forEach((c, i) => {
+    if (p < 6 && i < piles[p].length - 1) return;  // only the top card of stock, waste, foundations shows
+    const pos = L.position(p, i);
+    drawCard(ctx, c.id, c.up, pos.x - L.card.w / 2, toY(pos.y) - L.card.h / 2, L.card.w, L.card.h);
+  });
+}
+
+let seed = 1;
+function deal() {
+  let s = seed;
+  const rand = () => ((s = (s * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+  const deck = Array.from({ length: 52 }, (_, i) => i);
+  for (let i = deck.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [deck[i], deck[j]] = [deck[j], deck[i]]; }
+  const piles = Array.from({ length: 13 }, () => []);
+  for (let col = 0; col < 7; col++) for (let k = 0; k <= col; k++) piles[6 + col].push({ id: deck.pop(), up: k === col });
+  piles[1].push({ id: deck.pop(), up: true });
+  // Put an ace on a foundation, if one is left in the stock, so a played-in board is visible too.
+  const ace = deck.findIndex(id => id % 13 === 0);
+  if (ace >= 0) { const id = deck.splice(ace, 1)[0]; piles[2 + Math.floor(id / 13)].push({ id, up: true }); }
+  piles[0] = deck.map(id => ({ id, up: false }));
+  return piles;
+}
+
+function drawControlsBar(ctx, w, y) {
+  ctx.fillStyle = "#000"; ctx.fillRect(0, y, w, BAR);
+  ctx.fillStyle = "rgb(140,140,140)"; ctx.font = "14px -apple-system, sans-serif"; ctx.textBaseline = "middle";
+  ctx.fillText("0:28   •   0 moves", 24, y + BAR / 2);
+  // Icon placeholders at the same frames as GameControls.m: three 56pt buttons, 12pt from the right edge.
+  const icons = [drawUndoIcon, drawNewGameIcon, drawGearIcon];
+  icons.forEach((draw, i) => {
+    const bx = w - (3 - i) * 56 - 12;
+    ctx.save(); ctx.translate(bx + 16, y + 14); draw(ctx, i === 0 ? "rgb(77,77,77)" : "rgb(217,217,217)"); ctx.restore();
+  });
+}
+function drawUndoIcon(ctx, color) {
+  ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.lineCap = ctx.lineJoin = "round";
+  ctx.beginPath(); ctx.moveTo(9, 4); ctx.lineTo(4, 9); ctx.lineTo(9, 14);
+  ctx.moveTo(4.5, 9); ctx.lineTo(13, 9); ctx.arc(13, 15, 6, -Math.PI / 2, Math.PI / 2); ctx.lineTo(7, 21); ctx.stroke();
+}
+function drawNewGameIcon(ctx, color) {
+  const start = -Math.PI / 3, end = Math.PI * 1.28, r = 7.5;
+  ctx.strokeStyle = ctx.fillStyle = color; ctx.lineWidth = 2; ctx.lineCap = "round";
+  ctx.beginPath(); ctx.arc(12, 12, r, start, end); ctx.stroke();
+  const tip = { x: 12 + r * Math.cos(end), y: 12 + r * Math.sin(end) }, t = { x: -Math.sin(end), y: Math.cos(end) }, n = { x: -t.y, y: t.x };
+  ctx.beginPath(); ctx.moveTo(tip.x + t.x * 5, tip.y + t.y * 5);
+  ctx.lineTo(tip.x - t.x + n.x * 4.5, tip.y - t.y + n.y * 4.5); ctx.lineTo(tip.x - t.x - n.x * 4.5, tip.y - t.y - n.y * 4.5); ctx.fill();
+}
+function drawGearIcon(ctx, color) {
+  ctx.fillStyle = color; ctx.beginPath();
+  const base = 8.2, top = 10.8, bh = 0.34, th = 0.2;
+  for (let i = 0; i < 8; i++) {
+    const a = i * Math.PI / 4;
+    if (i === 0) ctx.moveTo(12 + base * Math.cos(a - bh), 12 + base * Math.sin(a - bh));
+    else ctx.arc(12, 12, base, a - Math.PI / 4 + bh, a - bh);
+    ctx.lineTo(12 + top * Math.cos(a - th), 12 + top * Math.sin(a - th));
+    ctx.lineTo(12 + top * Math.cos(a + th), 12 + top * Math.sin(a + th));
+    ctx.lineTo(12 + base * Math.cos(a + bh), 12 + base * Math.sin(a + bh));
+  }
+  ctx.arc(12, 12, base, 7 * Math.PI / 4 + bh, 2 * Math.PI - bh); ctx.closePath();
+  ctx.moveTo(15.6, 12); ctx.arc(12, 12, 3.6, 0, 2 * Math.PI);
+  ctx.fill("evenodd");
+}
+
+let board = deal();
+function renderBoard() {
+  const portrait = document.querySelector("#orientSeg .on").dataset.v === "portrait";
+  const W = portrait ? 768 : 1024, H = portrait ? 1024 : 768;
+  const ctx = prepareCanvas(document.getElementById("board"), W, H);
+  drawScene(ctx, W, H - BAR, board);
+  drawControlsBar(ctx, W, H - BAR);
+}
+
+function renderStress() {
+  const portrait = document.querySelector("#orientSeg .on").dataset.v === "portrait";
+  const W = portrait ? 768 : 1024, sceneH = (portrait ? 1024 : 768) - BAR;
+  // A K→A run alternating red and black: K♠ Q♥ J♣ 10♦ …
+  const run = Array.from({ length: 13 }, (_, i) => ({ id: [3, 0, 2, 1][i % 4] * 13 + (12 - i), up: true }));
+  const views = [["stressRun", run], ["stressCompressed", [...Array.from({ length: 6 }, (_, i) => ({ id: 13 * 3 + i, up: false })), ...run]]];
+  for (const [canvasId, column] of views) {
+    const piles = Array.from({ length: 13 }, () => []);
+    piles[12] = column;
+    const L = layout(W, sceneH, piles), o = L.origin(12);
+    // Crop to the rightmost column so the view stays narrow.
+    const cropX = o.x - L.card.w / 2 - 12, cropW = L.card.w + 24, cropTop = sceneH - (o.y + L.card.h / 2) - 12;
+    const canvas = document.getElementById(canvasId), ctx = prepareCanvas(canvas, cropW, sceneH - cropTop);
+    ctx.save(); ctx.translate(-cropX, -cropTop); drawScene(ctx, W, sceneH, piles, 0, false); ctx.restore();
+  }
+}
+
+function renderDeck() {
+  const el = document.getElementById("deck"); el.innerHTML = "";
+  const scale = zoomScale(), dpr = window.devicePixelRatio || 1;
+  const portrait = document.querySelector("#orientSeg .on").dataset.v === "portrait";
+  const card = cardSizeFor(portrait ? 768 : 1024);
+  const make = (id, up) => {
+    const c = document.createElement("canvas");
+    c.width = Math.round(card.w * scale * dpr); c.height = Math.round(card.h * scale * dpr);
+    c.style.width = card.w * scale + "px"; c.style.height = card.h * scale + "px";
+    const ctx = c.getContext("2d"); ctx.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
+    drawCard(ctx, id, up, 0, 0, card.w, card.h);
+    c.title = nameFor(up ? id : -1) + ".png" + (art.has(nameFor(up ? id : -1)) ? "" : " (fallback)");
+    return c;
+  };
+  for (const s of [3, 0, 1, 2]) {  // S H D C, matching the filename list
+    const row = document.createElement("div"); row.className = "suitrow";
+    for (let r = 0; r < 13; r++) row.append(make(s * 13 + r, true));
+    el.append(row);
+  }
+  const row = document.createElement("div"); row.className = "suitrow"; row.append(make(0, false)); el.append(row);
+}
+
+function renderCards() { validateCards(); renderBoard(); renderStress(); renderDeck(); }
+
+// ---------- Shared input helpers ----------
+
+function segmented(id, onChange) {
+  const seg = document.getElementById(id);
+  seg.addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    seg.querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b));
+    onChange(b.dataset.v);
+  });
+}
+
+async function filesFromDrop(dt) {
+  const out = [];
+  const walk = async entry => {
+    if (entry.isFile) out.push(await new Promise((res, rej) => entry.file(res, rej)));
+    else if (entry.isDirectory) {
+      const reader = entry.createReader();
+      let batch;
+      do { batch = await new Promise((res, rej) => reader.readEntries(res, rej)); for (const e of batch) await walk(e); } while (batch.length);
+    }
+  };
+  const entries = [...dt.items].map(i => i.webkitGetAsEntry && i.webkitGetAsEntry()).filter(Boolean);
+  if (entries.length) for (const e of entries) await walk(e);
+  else out.push(...dt.files);
+  return out;
+}
+
+function dropTarget(id, onFiles) {
+  const el = document.getElementById(id);
+  el.addEventListener("dragover", e => { e.preventDefault(); el.classList.add("over"); });
+  el.addEventListener("dragleave", () => el.classList.remove("over"));
+  el.addEventListener("drop", async e => { e.preventDefault(); el.classList.remove("over"); onFiles(await filesFromDrop(e.dataTransfer)); });
+}
+
+// ---------- App icon ----------
+
+let iconImg = null, iconInfo = null;
+let homeOrient = "portrait", wallpaper = "dark", wallpaperURL = null;
+
+async function loadIcon(file) {
+  if (!file) return;
+  if (iconImg) URL.revokeObjectURL(iconImg.src);
+  const img = new Image(); img.src = URL.createObjectURL(file);
+  try { await img.decode(); } catch { iconImg = null; iconInfo = { error: `${file.name} could not be decoded.` }; renderIcon(); return; }
+  iconImg = img;
+  // Scan every pixel of the full-size image for transparency.
+  const c = document.createElement("canvas"); c.width = img.naturalWidth; c.height = img.naturalHeight;
+  const ctx = c.getContext("2d"); ctx.drawImage(img, 0, 0);
+  const data = ctx.getImageData(0, 0, c.width, c.height).data;
+  let transparent = 0;
+  for (let i = 3; i < data.length; i += 4) if (data[i] < 255) transparent++;
+  iconInfo = { name: file.name, w: img.naturalWidth, h: img.naturalHeight, transparent };
+  renderIcon();
+}
+
+// Downscales in halving steps for a sharper result, close to what sips produces.
+function iconCanvas(px) {
+  let src = iconImg, w = iconImg.naturalWidth;
+  while (w / 2 >= px) {
+    const step = document.createElement("canvas"); step.width = step.height = Math.round(w / 2);
+    const sctx = step.getContext("2d"); sctx.imageSmoothingQuality = "high"; sctx.drawImage(src, 0, 0, step.width, step.height);
+    src = step; w = step.width;
+  }
+  const c = document.createElement("canvas"); c.width = c.height = px;
+  const ctx = c.getContext("2d"); ctx.imageSmoothingQuality = "high"; ctx.drawImage(src, 0, 0, px, px);
+  return c;
+}
+
+function renderIcon() {
+  const v = document.getElementById("iconValidation");
+  if (!iconInfo) v.innerHTML = '<span class="hint">No icon loaded.</span>';
+  else if (iconInfo.error) v.innerHTML = `<div class="bad">${iconInfo.error}</div>`;
+  else {
+    const issues = [];
+    if (iconInfo.w !== iconInfo.h) issues.push(`Not square (${iconInfo.w}×${iconInfo.h}).`);
+    if (iconInfo.w < 1024 || iconInfo.h < 1024) issues.push(`Smaller than 1024×1024 (${iconInfo.w}×${iconInfo.h}).`);
+    if (iconInfo.w !== 1024 || iconInfo.h !== 1024) issues.push("scripts/make-icons.sh only accepts exactly 1024×1024.");
+    if (iconInfo.transparent) issues.push(`${iconInfo.transparent.toLocaleString()} transparent pixels. Fill the corners; iOS shows transparency as black.`);
+    v.innerHTML = `<div>${iconInfo.name}: ${iconInfo.w}×${iconInfo.h}</div>` +
+      (issues.length ? `<ul class="issues bad"><li>${issues.join("</li><li>")}</li></ul>` : '<div class="ok">Square, 1024×1024, fully opaque.</div>');
+  }
+
+  const sizes = document.getElementById("sizes"); sizes.innerHTML = "";
+  const dpr = window.devicePixelRatio || 1;
+  for (const [px, use] of [[152, "Home screen"], [80, "Spotlight"], [58, "Settings"]]) {
+    const fig = document.createElement("figure"), pair = document.createElement("div"); pair.className = "pair";
+    if (iconImg) {
+      const one = iconCanvas(px); one.className = "masked"; one.style.width = one.style.height = px / dpr + "px";
+      const phys = iconCanvas(px); phys.className = "masked"; phys.style.width = phys.style.height = (px / 2) * 96 / 163 + "px";
+      pair.append(one, phys);
+    } else pair.innerHTML = `<div class="masked" style="width:${px / dpr}px;height:${px / dpr}px;background:#2a2a2e"></div>`;
+    fig.append(pair);
+    fig.insertAdjacentHTML("beforeend", `<figcaption>${px}px · ${use}<br>1× &nbsp;·&nbsp; physical</figcaption>`);
+    sizes.append(fig);
+  }
+
+  const cmp = document.getElementById("compareNew"); cmp.innerHTML = "";
+  if (iconImg) cmp.append(iconCanvas(152));
+  renderHome();
+}
+
+const PLACEHOLDERS = [["Mail", "#3d8bfd"], ["Safari", "#2fb8e8"], ["Music", "#fc3c5c"], ["Photos", "#f5b13c"],
+  ["Calendar", "#f2f2f2"], ["Notes", "#f7d34a"], ["Maps", "#57c26a"], ["Settings", "#8e8e93"], ["Clock", "#1c1c1e"],
+  ["Camera", "#5a5a60"], ["Contacts", "#b0aaa0"], ["Reminders", "#ffffff"], ["App Store", "#1d9bf0"], ["Messages", "#34c759"],
+  ["FaceTime", "#30d158"], ["Videos", "#202024"], ["iBooks", "#ff9f0a"], ["Podcasts", "#a050e0"], ["Game Center", "#e8e8e8"]];
+
+function renderHome() {
+  const portrait = homeOrient === "portrait", W = portrait ? 768 : 1024, H = portrait ? 1024 : 768;
+  const home = document.getElementById("home");
+  home.style.width = W + "px"; home.style.height = H + "px";
+  home.style.backgroundImage = wallpaper === "custom" && wallpaperURL ? `url("${wallpaperURL}")`
+    : wallpaper === "light" ? "linear-gradient(160deg,#e9eef5,#c6d4e6 60%,#b7c7dc)"
+    : "linear-gradient(160deg,#1a2233,#0c0f17 60%,#05060a)";
+  // iOS 10 iPad grid: 4×5 in portrait, 5×4 in landscape, 76pt icons.
+  const cols = portrait ? 4 : 5, rows = portrait ? 5 : 4;
+  const icon = (label, color) => {
+    const a = document.createElement("div"); a.className = "app";
+    const ic = document.createElement("div"); ic.className = "ic";
+    if (color) ic.style.background = color;
+    else if (iconImg) ic.append(iconCanvas(152)); else ic.style.background = "#2a2a2e";
+    a.append(ic); a.insertAdjacentHTML("beforeend", `<span>${label}</span>`);
+    return a;
+  };
+  const grid = document.createElement("div"); grid.className = "grid";
+  const top = portrait ? 70 : 52, side = portrait ? 76 : 100, bottom = 150;
+  Object.assign(grid.style, { left: side + "px", right: side + "px", top: top + "px", bottom: bottom + "px",
+    gridTemplateColumns: `repeat(${cols}, 1fr)`, gridTemplateRows: `repeat(${rows}, 1fr)`, justifyItems: "center", alignItems: "start" });
+  const apps = PLACEHOLDERS.slice(0, cols * rows - 1).map(([l, c]) => icon(l, c));
+  apps.splice(cols + 1, 0, icon("Solitaire", null));  // second row, second column
+  grid.append(...apps);
+  const dock = document.createElement("div"); dock.className = "dock";
+  dock.append(...[["Phone", "#34c759"], ["Mail", "#3d8bfd"], ["Safari", "#2fb8e8"], ["Music", "#fc3c5c"]].map(([l, c]) => { const a = icon(l, c); a.querySelector("span").remove(); return a; }));
+  const dots = document.createElement("div"); dots.className = "dots"; dots.innerHTML = "<i></i><i></i>";
+  home.replaceChildren(grid, dots, dock);
+  // Scale the mock to fit the window width.
+  const outer = document.getElementById("homeOuter"), wrap = document.getElementById("homeWrap");
+  const s = Math.min(1, (outer.clientWidth || W) / W);
+  wrap.style.transform = `scale(${s})`; outer.style.height = H * s + "px";
+}
+
+// ---------- Wiring ----------
+
+document.querySelectorAll("nav button").forEach(b => b.addEventListener("click", () => {
+  document.querySelectorAll("nav button").forEach(x => x.setAttribute("aria-selected", x === b));
+  document.querySelectorAll("section.tab").forEach(s => s.classList.toggle("active", s.id === "tab-" + b.dataset.tab));
+  if (b.dataset.tab === "icon") renderHome();
+}));
+document.getElementById("cardFolder").addEventListener("change", e => loadCardFiles([...e.target.files]));
+document.getElementById("cardFiles").addEventListener("change", e => loadCardFiles([...e.target.files]));
+dropTarget("cardDrop", loadCardFiles);
+segmented("orientSeg", () => { renderBoard(); renderStress(); renderDeck(); });
+segmented("zoomSeg", v => { document.getElementById("physHint").hidden = v !== "phys"; renderBoard(); renderStress(); renderDeck(); });
+document.getElementById("redeal").addEventListener("click", () => { seed = (seed * 48271 + 7) % 2147483647; board = deal(); renderBoard(); });
+
+document.getElementById("iconFile").addEventListener("change", e => loadIcon(e.target.files[0]));
+dropTarget("iconDrop", files => loadIcon(files.find(f => /\.png$/i.test(f.name)) || files[0]));
+segmented("homeOrientSeg", v => { homeOrient = v; renderHome(); });
+segmented("wallSeg", v => { if (v === "custom") document.getElementById("wallFile").click(); else { wallpaper = v; renderHome(); } });
+document.getElementById("wallFile").addEventListener("change", e => {
+  const f = e.target.files[0]; if (!f) return;
+  if (wallpaperURL) URL.revokeObjectURL(wallpaperURL);
+  wallpaperURL = URL.createObjectURL(f); wallpaper = "custom"; renderHome();
+});
+window.addEventListener("resize", renderHome);
+
+renderCards();
+renderIcon();
+</script>
+</body>
+</html>

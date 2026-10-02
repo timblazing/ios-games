@@ -4,11 +4,11 @@ Retro iOS games: small native games for a jailbroken iPad mini 2 (A7, iOS 10.3.3
 
 | Game | Status |
 |---|---|
-| [Solitaire](games/solitaire/) | v1 installed and playable; [v2 spec](games/solitaire/docs/V2_SPEC.md) in progress |
+| [Solitaire](games/solitaire/) | v2 built ([spec](games/solitaire/docs/V2_SPEC.md)); device checks pending |
 
 ## Stack
 
-Every game uses the same stack: Objective-C, UIKit, and SpriteKit, built with Theos against the iPhoneOS 10.3 SDK (ARM64, iOS 10.0+, iPad only). Modern iOS devices are not a target. See [docs/ipad-mini-2-ios10-game-development-guide.md](docs/ipad-mini-2-ios10-game-development-guide.md).
+Every game uses the same stack: Objective-C, UIKit, and SpriteKit, built with Theos on macOS (ARM64, iOS 10.0 deployment target, iPad only). Current Xcode can't link against the iPhoneOS 10.3 SDK, so games build with the 16.5 SDK that the Theos installer provides; see [Solitaire's build notes](games/solitaire/README.md#build). Modern iOS devices are not a target. See [docs/ipad-mini-2-ios10-game-development-guide.md](docs/ipad-mini-2-ios10-game-development-guide.md).
 
 ## Layout
 

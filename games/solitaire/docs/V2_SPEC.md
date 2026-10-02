@@ -1,8 +1,8 @@
 # Solitaire v2 spec
 
-Status: draft. v1 (1.0.0) installs and runs on the iPad mini 2 (iOS 10.3.3, TNS Sockport, AppSync Unified) via Legacy iOS Kit → Install IPA (ideviceinstaller).
+Status: implemented in 2.0.0; device checks pending (see `Tests/DEVICE_CHECKLIST.md`). v1 (1.0.0) installs and runs on the iPad mini 2 (iOS 10.3.3, TNS Sockport, AppSync Unified) via Legacy iOS Kit → Install IPA (ideviceinstaller).
 
-Same target as v1: ARM64, iOS 10.0+, iPhoneOS 10.3 SDK, Theos, Objective-C, UIKit + SpriteKit, offline.
+Same target as v1: ARM64, iOS 10.0+, Theos, Objective-C, UIKit + SpriteKit, offline. Built with the iPhoneOS 16.5 SDK because current Xcode can't link against the 10.3 SDK's stubs; the deployment target stays 10.0.
 
 ## Goals
 
@@ -131,14 +131,14 @@ Replace the generated v1 icon with your own design.
 
 A static, zero-dependency page for previewing card art and the app icon on the Mac before building.
 
-Location: `tools/design-playground/index.html` (single file, inline CSS/JS). Open with `open tools/design-playground/index.html`. No server or build step. Nothing is uploaded; images stay in the browser.
+Location: `games/solitaire/tools/design-playground/index.html` (single file, inline CSS/JS). Open with `open tools/design-playground/index.html`. No server or build step. Nothing is uploaded; images stay in the browser.
 
 ### Cards tab
 
 - **Load art:** a folder picker (`<input type="file" webkitdirectory>`) or drag-and-drop for a folder containing the faces and `back.png`. Pointing it at `Resources/Cards/` should just work.
 - **Validation panel:** lists missing or unexpected filenames against the 53 expected names, plus files that aren't 5:7 or are below 250×350.
 - **Full deck grid:** all 52 faces + back, by suit.
-- **Simulated board:** a black canvas sized to the iPad mini 2 in points (1024×768 landscape / 768×1024 portrait toggle), with the v2 bottom controls bar mockup (status + three icon placeholders). It uses the same layout math as `GameScene.m`: margin `max(14, w*0.025)`, card width `min(112, (w - 2*margin - 72) / 7)`, height = width × 1.4, tableau offsets 0.24h face-up / 0.105h face-down, 7pt corner radius, 2pt inset, drop shadow. It deals a random board using the loaded art. Add a comment pointing at `GameScene.m` so the two stay in sync.
+- **Simulated board:** a black canvas sized to the iPad mini 2 in points (1024×768 landscape / 768×1024 portrait toggle), with the v2 bottom controls bar mockup (status + three icon placeholders). It uses the same layout math as `GameScene.m`: margin `max(14, w*0.025)`, card width `min(112, (w - 2*margin - 72) / 7)`, height = width × 1.4, tableau offsets 0.24h face-up (0.32h in portrait) / 0.105h face-down, 7pt corner radius, 2pt inset, drop shadow. It deals a random board using the loaded art. Add a comment pointing at `GameScene.m` so the two stay in sync.
 - **Stress views:** one column with a 13-card face-up run, plus a compressed version, to check index legibility at worst-case overlap.
 - **Zoom:** 1× (actual points) and 2× (device pixels), plus a "physical size" mode approximating the mini 2's 326 ppi on the Mac screen.
 - **Fallback preview:** missing cards render the way the app's fallback would (rank text + suit emoji, lattice back), so a partial set previews accurately.
@@ -165,6 +165,11 @@ Location: `tools/design-playground/index.html` (single file, inline CSS/JS). Ope
 - One card design, no options. Missing art falls back to v1 drawn cards.
 - New game icon is a circular arrow.
 - Orientation always follows the device.
+- Icons are drawn in code with `UIBezierPath`, not bundled PNGs.
+- The texture cache `countLimit` is 220, and all 53 textures are pre-rendered for both orientations' card sizes at launch. Nothing is cleared on rotation.
+- In portrait, face-up tableau cards step 0.32 of card height (0.24 in landscape). The playground uses the same values.
+- The default lattice back is drawn in code as the fallback. `Resources/CardBacks/` is gone, and `Resources/Cards/` ships empty.
+- The playground compares against a frozen copy of the v1 icon (`tools/design-playground/v1-icon-152.png`), because `make-icons.sh` overwrites `Resources/Icon-76@2x.png`.
 - No Draw 3. The Draw mode row is removed from Settings.
 
 ## Out of scope (unchanged from v1)
