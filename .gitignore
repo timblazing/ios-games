@@ -1,10 +1,10 @@
-.theos/
-packages/*
-!packages/*.deb
-dist/*
-!dist/*.ipa
-!dist/SHA256SUMS
 .DS_Store
 *.d
 *.o
-Tests/rules-tests
+**/.theos/
+**/packages/*
+!**/packages/*.deb
+**/dist/*
+!**/dist/*.ipa
+!**/dist/SHA256SUMS
+games/*/Tests/rules-tests
